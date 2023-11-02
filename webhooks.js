@@ -27,30 +27,155 @@ Scratch.ArgumentType.NOTE	A note on a piano keyboard.	?
 Scratch.ArgumentType.IMAGE	Displays an inline image, not actually an input. Described later.	N/A
 */
 
-class Webhooks {
-  getInfo() {
-	return {
-	  id: 'webhooks',
-	  name: 'Webhooks',
-	  blocks: [
-		{
-		  opcode: 'connect',
-		  blockType: Scratch.BlockType.COMMAND,
-		  text: 'Connect to [URL]',
-		  arguments: {
-			URL: {
-			  type: Scratch.ArgumentType.STRING
-			}
-		  }
+(function(Scratch) {
+	'use strict';
+	
+	if (!Scratch.extensions.unsandboxed) {
+		throw new Error('Webhooks needs to be ran in unsandboxed mode.');
+	}
+
+	var socket;
+	var last = {};
+
+	class Webhooks {
+		getInfo() {
+			return {
+				id: 'webhooks',
+				name: 'Webhooks',
+				blocks: [
+					{
+						opcode: 'connect',
+						blockType: Scratch.BlockType.COMMAND,
+						text: 'connect to [URL]',
+						arguments: {
+							URL: {
+								type: Scratch.ArgumentType.STRING
+							}
+						}
+					}, {
+						opcode: 'send',
+						blockType: Scratch.BlockType.COMMAND,
+						text: 'send [TXT]',
+						arguments: {
+							TXT: {
+								type: Scratch.ArgumentType.STRING
+							}
+						}
+					}, {
+						opcode: 'close',
+						blockType: Scratch.BlockType.COMMAND,
+						text: 'close',
+						arguments: {}
+					}, {
+						opcode: 'lastValue',
+						blockType: Scratch.BlockType.REPORTER,
+						text: 'last [VAL]',
+						arguments: {
+							VAL: {
+								type: Scratch.ArgumentType.STRING,
+								menu: 'values'
+							}
+						}
+					}, {
+						blockType: Scratch.BlockType.EVENT,
+						opcode: 'whenEvent',
+						text: 'When webhook event [EVT] recieved',
+						isEdgeActivated: false, // required boilerplate
+						arguments: {
+							EVT: {
+								type: Scratch.ArgumentType.STRING,
+								menu: 'events'
+							}
+						}
+					}
+				],
+				menus: {
+					events: {
+						acceptReporters: false,
+						items: [
+							{
+								text: 'Open',
+								value: 'open'
+							},
+							{
+								text: 'Error',
+								value: 'error'
+							},
+							{
+								text: 'Message',
+								value: 'message'
+							},
+							{
+								text: 'Close',
+								value: 'close'
+							}
+						]
+					},
+					values: {
+						acceptReporters: false,
+						items: [
+							{
+								text: 'message',
+								value: 'data'
+							},
+							{
+								text: 'close reason',
+								value: 'reason'
+							}
+						]
+					}
+				}
+			};
 		}
-	  ]
-	};
-  }
+		
+		connect(args) {
+			if (socket) return;
+			
+			startSocket(args.URL);
+		}
 
-  connect(args) {
-	console.log("Connecting to webhook");
-	this.webhook = new WebSocket(args.URL);
-  }
-}
+		send(args) {
+			if (!socket) return;
 
-Scratch.extensions.register(new Webhooks());
+			socket.send(args.TXT);
+		}
+
+		close(args) {
+			if (!socket) return;
+
+			socket.close();
+			socket = null;
+		}
+
+		lastValue(args) {
+			return last[args.VAL];
+		}
+	}
+
+	function startSocket(url) {
+		socket = new WebSocket(url);
+
+		socket.addEventListener("open", eventListener);
+		socket.addEventListener("error", eventListener);
+		socket.addEventListener("message", eventListener);
+		socket.addEventListener("close", eventListener);
+	}
+
+	function eventListener(event) {
+		switch(event.type) {
+			case "message":
+				last['data'] = event.data.toString();
+				break;
+			case "close":
+				last['reason'] = event.reason;
+				break;
+			}
+		}
+	
+		Scratch.vm.runtime.startHats('webhooks_whenEvent', {
+			EVT: event.type
+		});
+	}
+	
+	Scratch.extensions.register(new Webhooks());
+})(Scratch);
