@@ -29,7 +29,7 @@ Scratch.ArgumentType.IMAGE	Displays an inline image, not actually an input. Desc
 
 (function(Scratch) {
 	'use strict';
-	
+
 	if (!Scratch.extensions.unsandboxed) {
 		throw new Error('Webhooks needs to be ran in unsandboxed mode.');
 	}
@@ -127,10 +127,10 @@ Scratch.ArgumentType.IMAGE	Displays an inline image, not actually an input. Desc
 				}
 			};
 		}
-		
+
 		connect(args) {
 			if (socket) return;
-			
+
 			startSocket(args.URL);
 		}
 
@@ -169,13 +169,12 @@ Scratch.ArgumentType.IMAGE	Displays an inline image, not actually an input. Desc
 			case "close":
 				last['reason'] = event.reason;
 				break;
-			}
 		}
-	
+
 		Scratch.vm.runtime.startHats('webhooks_whenEvent', {
 			EVT: event.type
 		});
 	}
-	
+
 	Scratch.extensions.register(new Webhooks());
 })(Scratch);
