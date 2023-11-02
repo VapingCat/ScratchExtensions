@@ -48,6 +48,7 @@ class Webhooks {
   }
 
   connect(args) {
+	console.log("Connecting to webhook");
 	this.webhook = new WebSocket(args.URL);
   }
 }
