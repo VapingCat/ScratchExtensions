@@ -176,5 +176,5 @@ Scratch.ArgumentType.IMAGE	Displays an inline image, not actually an input. Desc
 		});
 	}
 
-	Scratch.extensions.register(new Webhooks());
+	Scratch.extensions.register(new Websockets());
 })(Scratch);
